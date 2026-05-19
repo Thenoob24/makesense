@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '596:596'
+      - '596:80'
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`makesense.constantblaszyk.fr`)"
