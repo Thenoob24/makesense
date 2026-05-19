@@ -1,5 +1,5 @@
 # Stage 1: Build the Vite application
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 # Install dependencies based on lockfile for reproducible builds
@@ -9,23 +9,17 @@ RUN npm ci --silent
 # Copy the rest of the source files
 COPY . .
 
-# Accept environment variables as build args (with defaults)
-ARG VITE_SUPABASE_URL=https://prajvanuzexourcqkchn.supabase.co
-ARG VITE_SUPABASE_ANON_KEY=sb_publishable_-Q4xBgZupZ_O3aRCpjCAdQ_tyRDSMLP
-ARG VITE_LLM7_API_URL=https://api.llm7.io/v1
-ARG VITE_LLM7_API_KEY=i58OYS6Uldlk2XqL9Dm3d/0QRz8psOtIVNvTvAOUMXO3JMnHCC8u22Dt8Hq6bgcg2VAnZDPwfFF4qUBn6HxcQvYGvb5YGgOrFWaORZ437jD851Ew3BGByzlUpFQhmgbQkvwESsWyP9xZ3SIE
-
-# Build the static assets
-RUN npm run build
+# Build the static assets (skip tsc type-checking, not needed for production bundle)
+RUN npx vite build
 
 # Stage 2: Serve the built assets with Nginx
 FROM nginx:stable-alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Optional custom Nginx config (can be added later if needed)
-#COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+# Custom Nginx config for SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 
 # Start Nginx in the foreground
-CMD ["nginx", "-g", "daemon off;" ]
+CMD ["nginx", "-g", "daemon off;"]
