@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - '80:80'
+      - '596:596'
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`makesense.constantblaszyk.fr`)"
@@ -20,7 +20,7 @@ services:
     restart: unless-stopped
     # Optional healthcheck
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
+      test: [ "CMD", "curl", "-f", "http://localhost" ]
       interval: 30s
       timeout: 10s
       retries: 3
