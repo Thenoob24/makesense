@@ -11,6 +11,9 @@ COPY . .
 # Build the static assets
 RUN npx vite build
 
-# Serve the built files with vite preview
+# Install a lightweight static server with SPA support
+RUN npm install -g serve
+
+# Serve the built files — the -s flag enables SPA fallback (all routes → index.html)
 EXPOSE 3000
-CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["serve", "dist", "-s", "-l", "3000"]
