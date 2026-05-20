@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/supabase';
+import type { Client, SOP } from '../lib/mockData';
 import {
   TrendingUp,
   Euro,
@@ -25,27 +27,65 @@ import {
   CartesianGrid
 } from 'recharts';
 
-// Fictional monthly data for blended ROAS over 6 months
-const roasTrendData = [
-  { month: 'Dec', ROAS: 3.1, spend: 120000, revenue: 372000 },
-  { month: 'Jan', ROAS: 3.3, spend: 140000, revenue: 462000 },
-  { month: 'Feb', ROAS: 3.2, spend: 155000, revenue: 496000 },
-  { month: 'Mar', ROAS: 3.5, spend: 180000, revenue: 630000 },
-  { month: 'Apr', ROAS: 3.7, spend: 210000, revenue: 777000 },
-  { month: 'May', ROAS: 3.8, spend: 245680, revenue: 933580 }
-];
-
-// Fictional breakdown of advertising spend by channel
-const channelData = [
-  { name: 'Meta Ads', value: 55, color: '#14B8A6' },
-  { name: 'Google Ads', value: 25, color: '#3B82F6' },
-  { name: 'TikTok Ads', value: 12, color: '#EC4899' },
-  { name: 'Klaviyo CRM', value: 8, color: '#8B5CF6' }
-];
+// Base data per client — KPIs scale with client count
+const BASE_ROAS = 2.8;
+const BASE_CAC = 22;
+const BASE_REVENUE_PER_CLIENT = 20000;
+const BASE_SPEND_PER_CLIENT = 5500;
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [sops, setSops] = useState<SOP[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch live data
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      const [clientList, sopList] = await Promise.all([
+        db.clients.list(),
+        db.sops.list(),
+      ]);
+      setClients(clientList);
+      setSops(sopList);
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  // Derived KPIs — scale with number of clients
+  const clientCount = clients.length;
+  const scaleFactor = Math.max(clientCount, 1);
+
+  // ROAS improves slightly with more clients (economies of scale)
+  const currentROAS = parseFloat((BASE_ROAS + clientCount * 0.08).toFixed(1));
+  // CAC decreases with more clients
+  const currentCAC = parseFloat(Math.max(BASE_CAC - clientCount * 0.6, 8).toFixed(2));
+  // Revenue scales linearly
+  const currentRevenue = BASE_REVENUE_PER_CLIENT * scaleFactor;
+  // Total spend
+  const currentSpend = BASE_SPEND_PER_CLIENT * scaleFactor;
+
+  // Generate dynamic trend data based on current values
+  const roasTrendData = [
+    { month: 'Dec', ROAS: parseFloat((currentROAS * 0.82).toFixed(1)), spend: Math.round(currentSpend * 0.49), revenue: Math.round(currentRevenue * 0.40) },
+    { month: 'Jan', ROAS: parseFloat((currentROAS * 0.87).toFixed(1)), spend: Math.round(currentSpend * 0.57), revenue: Math.round(currentRevenue * 0.50) },
+    { month: 'Feb', ROAS: parseFloat((currentROAS * 0.84).toFixed(1)), spend: Math.round(currentSpend * 0.63), revenue: Math.round(currentRevenue * 0.53) },
+    { month: 'Mar', ROAS: parseFloat((currentROAS * 0.92).toFixed(1)), spend: Math.round(currentSpend * 0.73), revenue: Math.round(currentRevenue * 0.68) },
+    { month: 'Avr', ROAS: parseFloat((currentROAS * 0.97).toFixed(1)), spend: Math.round(currentSpend * 0.86), revenue: Math.round(currentRevenue * 0.83) },
+    { month: 'Mai', ROAS: currentROAS, spend: currentSpend, revenue: currentRevenue },
+  ];
+
+  // Channel breakdown (percentages stay the same)
+  const channelData = [
+    { name: 'Meta Ads', value: 55, color: '#14B8A6' },
+    { name: 'Google Ads', value: 25, color: '#3B82F6' },
+    { name: 'TikTok Ads', value: 12, color: '#EC4899' },
+    { name: 'Klaviyo CRM', value: 8, color: '#8B5CF6' },
+  ];
 
   const getGreeting = () => {
     const hrs = new Date().getHours();
@@ -58,32 +98,46 @@ export const Dashboard: React.FC = () => {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+      transition: { staggerChildren: 0.1 },
+    },
   };
 
   const itemVariants = {
     hidden: { opacity: 0, y: 15 },
-    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, bounce: 0.2 } }
+    show: { opacity: 1, y: 0, transition: { type: 'spring' as const, bounce: 0.2 } },
   };
+
+  // Format number with french locale
+  const formatEuro = (n: number) => n.toLocaleString('fr-FR');
 
   // Custom tooltips for Recharts
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const dataPoint = payload[0].payload;
       return (
         <div className="bg-surface-card border border-border-dark p-3 rounded-lg shadow-xl">
           <p className="text-xs font-semibold text-text-secondary mb-1">Performance Blended</p>
           <p className="text-sm font-bold text-accent">ROAS: {payload[0].value}x</p>
           <p className="text-[11px] text-text-muted mt-1">
-            Budget dépensé: {roasTrendData.find(d => d.month === payload[0].payload.month)?.spend.toLocaleString('fr-FR')} €
+            Budget dépensé: {formatEuro(dataPoint.spend)} €
           </p>
         </div>
       );
     }
     return null;
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "linear" }}
+          className="w-10 h-10 border-4 border-accent/20 border-t-accent rounded-full"
+        />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -106,7 +160,7 @@ export const Dashboard: React.FC = () => {
         {/* Quick Date Display */}
         <div className="text-xs font-semibold text-text-secondary bg-surface-card border border-border-dark px-4 py-2 rounded-xl flex items-center gap-2 self-start md:self-auto">
           <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          Mise à jour : En direct (19 mai 2026)
+          Mise à jour : En direct ({new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })})
         </div>
       </motion.div>
 
@@ -121,10 +175,10 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-bold text-white tracking-tight glow-text-teal">3.8x</span>
+            <span className="text-3xl font-bold text-white tracking-tight glow-text-teal">{currentROAS}x</span>
             <div className="flex items-center gap-1 mt-1 text-emerald-400 text-xs font-medium">
               <ArrowUpRight className="w-3.5 h-3.5" />
-              <span>+12% vs mois-1</span>
+              <span>+{Math.round((currentROAS / (currentROAS * 0.97) - 1) * 100)}% vs mois-1</span>
             </div>
           </div>
         </div>
@@ -138,10 +192,10 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-bold text-white tracking-tight">14.50€</span>
+            <span className="text-3xl font-bold text-white tracking-tight">{currentCAC}€</span>
             <div className="flex items-center gap-1 mt-1 text-emerald-400 text-xs font-medium">
               <ArrowDownRight className="w-3.5 h-3.5" />
-              <span>-4% (Amélioration)</span>
+              <span>-{Math.round((1 - currentCAC / BASE_CAC) * 100)}% (Amélioration)</span>
             </div>
           </div>
         </div>
@@ -155,7 +209,7 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-bold text-white tracking-tight">245 680€</span>
+            <span className="text-3xl font-bold text-white tracking-tight">{formatEuro(currentRevenue)}€</span>
             <div className="flex items-center gap-1 mt-1 text-emerald-400 text-xs font-medium">
               <ArrowUpRight className="w-3.5 h-3.5" />
               <span>+18% vs mois-1</span>
@@ -172,9 +226,9 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
           <div className="mt-4">
-            <span className="text-3xl font-bold text-white tracking-tight">12 clients</span>
+            <span className="text-3xl font-bold text-white tracking-tight">{clientCount} client{clientCount > 1 ? 's' : ''}</span>
             <p className="text-[11px] text-text-muted mt-1.5">
-              +1 nouveau client signé cette semaine
+              {sops.length} SOPs dans la base de connaissances
             </p>
           </div>
         </div>
@@ -199,7 +253,7 @@ export const Dashboard: React.FC = () => {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
                 <XAxis dataKey="month" stroke="#64748B" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748B" fontSize={11} domain={[2, 4.5]} tickLine={false} axisLine={false} />
+                <YAxis stroke="#64748B" fontSize={11} domain={['auto', 'auto']} tickLine={false} axisLine={false} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area
                   type="monotone"
@@ -243,7 +297,7 @@ export const Dashboard: React.FC = () => {
             {/* Center Text inside Donut */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mt-2">
               <span className="text-xs text-text-muted">Total Budget</span>
-              <span className="text-lg font-bold text-white">245k€</span>
+              <span className="text-lg font-bold text-white">{formatEuro(currentSpend)}€</span>
             </div>
           </div>
 
@@ -297,13 +351,13 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-white">Recherche Globale</h4>
-              <p className="text-xs text-text-secondary mt-1">Recherchez instantanément parmi nos 50+ SOPs.</p>
+              <p className="text-xs text-text-secondary mt-1">Recherchez instantanément parmi vos {sops.length} SOPs.</p>
             </div>
           </div>
 
           {/* Card 3 */}
           <div
-            onClick={() => navigate('/knowledge-base?sop=structuration-compte-meta-ads')}
+            onClick={() => navigate('/knowledge-base')}
             className="glass-card rounded-2xl p-5 cursor-pointer flex flex-col justify-between h-36"
           >
             <div className="flex items-start justify-between">
@@ -313,8 +367,8 @@ export const Dashboard: React.FC = () => {
               <ArrowUpRight className="w-4 h-4 text-text-muted" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-white">SOP Compte Meta Ads</h4>
-              <p className="text-xs text-text-secondary mt-1">Accédez à notre framework de scaling Meta Ads.</p>
+              <h4 className="text-sm font-semibold text-white">Base de connaissances</h4>
+              <p className="text-xs text-text-secondary mt-1">Accédez à toutes les SOPs et guidelines.</p>
             </div>
           </div>
 
@@ -331,7 +385,7 @@ export const Dashboard: React.FC = () => {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-white">Fichiers Clients</h4>
-              <p className="text-xs text-text-secondary mt-1">Briefs, accès, comptes-rendus clients.</p>
+              <p className="text-xs text-text-secondary mt-1">{clientCount} client{clientCount > 1 ? 's' : ''} — briefs, accès, comptes-rendus.</p>
             </div>
           </div>
         </div>
