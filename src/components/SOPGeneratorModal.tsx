@@ -119,7 +119,7 @@ export const SOPGeneratorModal: React.FC<SOPGeneratorModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center lg:p-4 overflow-y-auto">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
@@ -134,7 +134,7 @@ export const SOPGeneratorModal: React.FC<SOPGeneratorModalProps> = ({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="relative w-full max-w-4xl bg-surface-card border border-border-dark rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[85vh]"
+          className="relative w-full lg:max-w-4xl bg-surface-card border border-border-dark rounded-t-2xl lg:rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col h-[95vh] lg:h-auto lg:max-h-[85vh]"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border-dark bg-secondary/10">

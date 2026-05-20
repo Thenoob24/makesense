@@ -56,6 +56,11 @@
   }
 }
 
+/* Safe area for notched phones (bottom nav) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Glassmorphism utility */
 .glass-panel {
   background: rgba(15, 23, 42, 0.7);

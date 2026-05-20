@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, setIsCollapsed })
 
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 rounded-md text-text-secondary hover:text-accent hover:bg-secondary/40 transition-colors focus:outline-none"
+            className="hidden lg:flex p-1 rounded-md text-text-secondary hover:text-accent hover:bg-secondary/40 transition-colors focus:outline-none"
           >
             {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </button>

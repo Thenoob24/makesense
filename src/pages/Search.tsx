@@ -288,7 +288,7 @@ export const Search: React.FC = () => {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 bottom-0 w-full max-w-2xl bg-surface-dark border-l border-border-dark z-50 flex flex-col shadow-2xl"
+              className="fixed top-0 right-0 bottom-0 w-full lg:max-w-2xl bg-surface-dark border-l border-border-dark z-50 flex flex-col shadow-2xl"
             >
               {/* Header */}
               <div className="px-6 py-4 border-b border-border-dark flex items-center justify-between bg-secondary/15">
